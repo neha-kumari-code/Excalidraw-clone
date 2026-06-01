@@ -1,17 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2023",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
+    "ignoreDeprecations": "6.0",
     "incremental": true,
     "plugins": [
       {
@@ -32,3 +33,14 @@
   ],
   "exclude": ["node_modules"]
 }
+
+// {
+//   "compilerOptions": {
+//     "module": "ESNext",
+//     "moduleResolution": "bundler",
+//     "target": "ES2023",
+//     "strict": true,
+//     "esModuleInterop": true,
+//     "ignoreDeprecations": "6.0"
+//   }
+// }
