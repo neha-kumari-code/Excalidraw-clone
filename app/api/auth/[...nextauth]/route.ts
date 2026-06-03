@@ -33,7 +33,8 @@ const handler=NextAuth({
             if(!user){
                 return null;
             }
-            const isValid=await bcrypt.compare(password,user.password!)
+            if(!user.password)return null;
+            const isValid=await bcrypt.compare(password,user.password)
             if(!isValid)return null
             return {
                 id:user.id.toString(),

@@ -3,29 +3,31 @@ import { Pencil } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import axios from "axios";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 export default function SignIn() {
-  const router=useRouter()
+    const [name,setName]=useState("")
     const [email,setEmail]=useState("")
     const [password,setPassword]=useState("")
-    const signInHandler=async()=>{
-      try{
-      const res=await signIn("credentials",{
-            email,password,
-            redirect:false
-          })
-          if(res?.error){
-            toast.error("Invalid credentials")
-          }else{
-            toast.success("Login successful!")
-            router.push("/mainPage")
-          }
-      }catch(e){
+    const router=useRouter()
+    const signUpHandler=async()=>{
+        try{
+            const {data}=await axios.post("/api/signup",{name,email,password})
+            if(data.success){
+            toast.success(data.message)
+            setName("");
+            setEmail("");
+            setPassword("");
+            router.push("/signin")
+            }else{
+                toast.error(data.message)
+            }
+        }catch (e) {
             toast.error("Something went wrong");
             console.error(e);
+        }
     }
-  } 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-100 via-white to-sky-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded shadow-xl shadow-gray-200 p-8">
@@ -42,7 +44,7 @@ export default function SignIn() {
         {/* Heading */}
         <div className="mt-4 text-center">
           <h1 className="text-2xl font-bold text-slate-900">
-            Log in or sign up
+             Sign up
           </h1>
           <p className="text-slate-500">
             Continue to access your drawings and collaborate.
@@ -51,6 +53,20 @@ export default function SignIn() {
 
         {/* Form */}
         <div className="mt-8 space-y-6">
+             {/* Name */}
+          <div className="relative">
+            <label className="absolute -top-2 left-3 bg-white px-1 text-sm text-slate-500">
+              Name
+            </label>
+
+            <input
+              type="text"
+              value={name}
+              placeholder="Enter your name"
+              onChange={(e)=>setName(e.target.value)}
+              className="w-full text-gray-800 rounded border-2 border-slate-400 bg-white px-2 py-2 outline-none focus:border-blue-500"
+            />
+          </div>
           {/* Email */}
           <div className="relative">
             <label className="absolute -top-2 left-3 bg-white px-1 text-sm text-slate-500">
@@ -83,7 +99,7 @@ export default function SignIn() {
 
           {/* Continue */}
           <button className="w-full rounded cursor-pointer bg-slate-900 py-2 font-medium text-white transition hover:bg-slate-800"
-          onClick={signInHandler}
+          onClick={signUpHandler}
           >
             Continue
           </button>
