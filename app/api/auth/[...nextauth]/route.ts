@@ -3,7 +3,8 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
-const handler=NextAuth({
+import type { NextAuthOptions } from "next-auth";
+export const  authOptions:NextAuthOptions={
     pages: {
     signIn: "/signin",
   },
@@ -53,7 +54,7 @@ const handler=NextAuth({
     callbacks:{
         async jwt({token,user}){
             if(user){
-                token.id=user.id
+                token.id=(user as any).id
             }
             return token
         },
@@ -64,5 +65,6 @@ const handler=NextAuth({
         return session;
        }
     }
-})
+}
+const handler=NextAuth(authOptions)
 export { handler as GET, handler as POST };
