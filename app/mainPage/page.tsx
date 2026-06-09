@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Minus,
   Pencil,
+  Eraser,
   Type,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -73,7 +74,9 @@ export default function MainPage() {
           <button onClick={()=>setTool("text")} className={`rounded-md p-2 hover:bg-slate-100 transition ${tool==="text"?"text-red-500":""}`}>
             <Type size={20} />
           </button>
-
+          <button onClick={()=>setTool("eraser")} className={`rounded-md p-2 hover:bg-slate-100 transition ${tool==="eraser"?"text-red-500":""}`}>
+            <Eraser size={20} />
+          </button>
         </div>
       </div>
       <canvas ref={canvasRef} />

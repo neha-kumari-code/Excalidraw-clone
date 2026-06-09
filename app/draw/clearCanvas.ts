@@ -30,6 +30,50 @@
 import { ShapesType } from "./game";
 import { ShapeType } from "@/generated/prisma/enums";
 
+function drawSelection(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  const padding = 4;
+  const handleSize = 8;
+
+  const sx = x - padding;
+  const sy = y - padding;
+  const sw = width + padding * 2;
+  const sh = height + padding * 2;
+
+  // selection border
+  ctx.strokeStyle = "#6965db"; // Excalidraw-like purple
+  ctx.lineWidth = 2;
+  ctx.strokeRect(sx, sy, sw, sh);
+
+  // corner handles
+  const handles = [
+    [sx, sy],               // top-left
+    [sx + sw, sy],          // top-right
+    [sx, sy + sh],          // bottom-left
+    [sx + sw, sy + sh],     // bottom-right
+  ];
+
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "#6965db";
+
+  handles.forEach(([hx, hy]) => {
+    ctx.beginPath();
+    ctx.rect(
+      hx - handleSize / 2,
+      hy - handleSize / 2,
+      handleSize,
+      handleSize
+    );
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+
 export function clearCanvas(
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D,
@@ -58,16 +102,17 @@ export function clearCanvas(
 
             // Draw selection border
             if (selectedShape?.id === s.id) {
-                ctx.beginPath();
-                ctx.strokeStyle = "blue";
-                ctx.lineWidth = 2;
+                drawSelection(ctx, d.startX, d.startY, d.width, d.height);
+                // ctx.beginPath();
+                // ctx.strokeStyle = "blue";
+                // ctx.lineWidth = 2;
 
-                ctx.strokeRect(
-                    d.startX,
-                    d.startY,
-                    d.width,
-                    d.height
-                );
+                // ctx.strokeRect(
+                //     d.startX,
+                //     d.startY,
+                //     d.width,
+                //     d.height
+                // );
             }
         }
     });

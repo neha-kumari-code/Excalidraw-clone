@@ -63,6 +63,18 @@ private dragOffsetY = 0;
         }
     }
 
+    callErase=(id:string)=>{
+        const updatedShapes = this.shapes.filter(
+        shape => shape.id !== id
+        );
+        this.shapes=updatedShapes
+         clearCanvas(
+    this.canvas,
+    this.ctx,
+    this.shapes,
+    this.selectedShape
+);
+            }
     mouseDownHandler=(e:MouseEvent)=>{
         if (e.button === 1) { // middle mouse
         this.isPanning = true;
@@ -82,13 +94,18 @@ const worldY =
 
     if(shape.type===ShapeType.RECT){
         const {startX,startY,width,height}=shape.data;
-
+        
         if(
             worldX >= startX &&
             worldX <= startX + width &&
             worldY >= startY &&
             worldY <= startY + height
         ){
+            if(this.tool==="eraser"){
+                this.callErase(shape.id)
+                console.log("erase")
+                return;
+            }
              this.selectedShape = shape;
         this.isDraggingShape = true;
 
