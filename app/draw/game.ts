@@ -1,6 +1,7 @@
 import axios from "axios";
 import { clearCanvas } from "./clearCanvas";
 import { ShapeType } from "@/generated/prisma/enums";
+import { erasing } from "./erasing";
 
 export type ShapesType={
     id:string,
@@ -18,14 +19,14 @@ export class Game{
     private shapes:ShapesType[];
     private cameraX = 0;
     private cameraY = 0;
-    private isPanning = false;
-    private lastX = 0;
-    private lastY = 0;
+    // private isPanning = false;
+    // private lastX = 0;
+    // private lastY = 0;
     private scale = 1;
     private selectedShape: ShapesType | null = null;
-private isDraggingShape = false;
-private dragOffsetX = 0;
-private dragOffsetY = 0;
+    private isDraggingShape = false;
+    private dragOffsetX = 0;
+    private dragOffsetY = 0;
     constructor(tool:string,canvas:HTMLCanvasElement){
         this.canvas=canvas;
         this.ctx=canvas.getContext("2d")!
@@ -38,18 +39,13 @@ private dragOffsetY = 0;
         this.init();
     }
     init=async()=>{
-         const {data}=await axios.get("/api/shapes")
-        if(!data.success)return;
-        this.shapes=data.shapes;
-        // clearCanvas(this.canvas,this.ctx,this.shapes,)
-        clearCanvas(
-    this.canvas,
-    this.ctx,
-    this.shapes,
-    this.selectedShape
-);
-        this.mouseHandler();
+    const {data}=await axios.get("/api/shapes");
+    if(!data.success)return;
+    this.shapes=data.shapes;
+    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    this.mouseHandler();
     }
+
     mouseHandler(){
         this.canvas.addEventListener("mousedown",this.mouseDownHandler);
         this.canvas.addEventListener("mouseup",this.mouseUpHandler);
@@ -63,73 +59,27 @@ private dragOffsetY = 0;
         }
     }
 
-    callErase=(id:string)=>{
-        const updatedShapes = this.shapes.filter(
-        shape => shape.id !== id
-        );
-        this.shapes=updatedShapes
-         clearCanvas(
-    this.canvas,
-    this.ctx,
-    this.shapes,
-    this.selectedShape
-);
-            }
     mouseDownHandler=(e:MouseEvent)=>{
-        if (e.button === 1) { // middle mouse
-        this.isPanning = true;
-        this.lastX = e.clientX;
-        this.lastY = e.clientY;
+    
+    if(this.tool==="eraser"){
+        const worldX =(e.offsetX-this.cameraX)/this.scale;
+        const worldY =(e.offsetY-this.cameraY)/this.scale;
+        this.shapes=erasing(worldX,worldY,this.shapes);
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
         return;
     }
 
-    const worldX =
-  (e.offsetX - this.cameraX) / this.scale;
-
-const worldY =
-  (e.offsetY - this.cameraY) / this.scale;
-
-  for(let i=this.shapes.length-1;i>=0;i--){
-    const shape=this.shapes[i];
-
-    if(shape.type===ShapeType.RECT){
-        const {startX,startY,width,height}=shape.data;
-        
-        if(
-            worldX >= startX &&
-            worldX <= startX + width &&
-            worldY >= startY &&
-            worldY <= startY + height
-        ){
-            if(this.tool==="eraser"){
-                this.callErase(shape.id)
-                console.log("erase")
-                return;
-            }
-             this.selectedShape = shape;
-        this.isDraggingShape = true;
-
-        this.dragOffsetX = worldX - startX;
-        this.dragOffsetY = worldY - startY;
-            break;
-        }
-    }
-}
-
-         this.isDrawing=true;
-        this.startX = e.offsetX - this.cameraX;
-this.startY = e.offsetY - this.cameraY;
+    this.isDrawing=true;
+    this.startX = (e.offsetX - this.cameraX)/this.scale;
+    this.startY = (e.offsetY - this.cameraY)/this.scale;
     }
     mouseUpHandler=async(e:MouseEvent)=>{
         this.isDraggingShape = false;
-//         await axios.put("/api/shapes",{
-//     id:this.selectedShape?.id,
-//     data:this.selectedShape?.data
-// });
         this.isDrawing=false;
-         this.isPanning = false;
-        const width = (e.offsetX - this.cameraX) - this.startX;
-const height = (e.offsetY - this.cameraY) - this.startY;
+        const worldX =(e.offsetX - this.cameraX)/this.scale;
+        const worldY =(e.offsetY - this.cameraY)/this.scale;
+        const width = worldX - this.startX;
+        const height = worldY - this.startY;
         if(this.tool==="rect"){
         const shape={
         type:ShapeType.RECT,
@@ -149,66 +99,37 @@ const height = (e.offsetY - this.cameraY) - this.startY;
              ...shape
         })
     }
-    // clearCanvas(this.canvas,this.ctx,this.shapes)
-    clearCanvas(
-    this.canvas,
-    this.ctx,
-    this.shapes,
-    this.selectedShape
-);
+   
+    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
 
 
     mouseMoveHandler=(e:MouseEvent)=>{
-        if(this.isDraggingShape && this.selectedShape){
+        const worldX =(e.offsetX - this.cameraX)/this.scale;
+        const worldY =(e.offsetY - this.cameraY)/this.scale;
+        
+      if(this.isDraggingShape && this.selectedShape){
+        this.selectedShape.data.startX =
+        worldX - this.dragOffsetX;
 
-    const worldX =
-      (e.offsetX - this.cameraX) / this.scale;
-
-    const worldY =
-      (e.offsetY - this.cameraY) / this.scale;
-
-    this.selectedShape.data.startX =
-      worldX - this.dragOffsetX;
-
-    this.selectedShape.data.startY =
-      worldY - this.dragOffsetY;
-
-    this.redraw();
-    return;
-}
-          if (this.isPanning) {
-        const dx = e.clientX - this.lastX;
-        const dy = e.clientY - this.lastY;
-
-        this.cameraX += dx;
-        this.cameraY += dy;
-
-        this.lastX = e.clientX;
-        this.lastY = e.clientY;
+        this.selectedShape.data.startY =
+        worldY - this.dragOffsetY;
 
         this.redraw();
         return;
-    }
+        }
+
         if(this.isDrawing){
-             this.redraw();
-        // clearCanvas(this.canvas,this.ctx,this.shapes)
-        clearCanvas(
-    this.canvas,
-    this.ctx,
-    this.shapes,
-    this.selectedShape
-);
-        if(this.tool==="rect"){
-           
-            const width=e.offsetX-this.startX;
-            const height=e.offsetY-this.startY;
+            this.redraw();
+            if(this.tool==="rect"){
+            const width=worldX-this.startX;
+            const height=worldY-this.startY;
             this.ctx.beginPath();
             this.ctx.strokeStyle="rgb(0,0,0)";
             this.ctx.rect(this.startX,this.startY,width,height)
             this.ctx.stroke()
+            }
         }
-    }
     }
 
   wheelHandler = (e: WheelEvent) => {
@@ -236,14 +157,9 @@ const height = (e.offsetY - this.cameraY) - this.startY;
     // apply camera transform
     this.ctx.setTransform(this.scale, 0, 0, this.scale, this.cameraX, this.cameraY);
 
-    // clearCanvas(this.canvas, this.ctx, this.shapes);
-    clearCanvas(
-    this.canvas,
-    this.ctx,
-    this.shapes,
-    this.selectedShape
-);
-}
+    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape
+    );
+    }
     setTool(tool:string){
         this.tool=tool
     }

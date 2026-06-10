@@ -32,6 +32,8 @@ enum ShapeType {
   ARROW
   LINE
   TEXT
+  RHOMBUS
+  PENCIL
 }
 
 model Shape {
