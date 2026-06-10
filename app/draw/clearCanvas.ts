@@ -2,6 +2,7 @@
 import { ShapesType } from "./game";
 import { ShapeType } from "@/generated/prisma/enums";
 import { drawRhombus } from "./rhombus";
+import { drawArrow } from "./arrow";
 
 function drawSelection(
   ctx: CanvasRenderingContext2D,
@@ -78,6 +79,14 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
                 const startX=data.cx-data.radius, startY=data.cy-data.radius;
                 drawSelection(ctx,startX,startY,data.radius*2, data.radius*2);
           }
+        }else if(s.type===ShapeType.ARROW){
+          const data=s.data;
+          drawArrow(canvas,ctx,data.fromX,data.toX,data.fromY,data.toY);
+        }else if(s.type===ShapeType.LINE){
+            ctx.beginPath();
+            ctx.moveTo(s.data.fromX,s.data.fromY);
+            ctx.lineTo(s.data.toX,s.data.toY);
+            ctx.stroke();
         }
     });
 }

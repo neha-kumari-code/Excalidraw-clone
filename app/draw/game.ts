@@ -3,6 +3,7 @@ import { clearCanvas } from "./clearCanvas";
 import { ShapeType } from "@/generated/prisma/enums";
 import { erasing } from "./erasing";
 import { drawRhombus } from "./rhombus";
+import { drawArrow } from "./arrow";
 
 export type ShapesType={
     id:string,
@@ -121,6 +122,30 @@ export class Game{
                 }
             }
             this.shapes.push({...shape})
+        }else if(this.tool==="arrow"){
+             shape={
+                id:crypto.randomUUID(),
+                type:ShapeType.ARROW,
+                data:{
+                    fromX:this.startX,
+                    fromY:this.startY,
+                    toX:worldX,
+                    toY:worldY
+                }
+            }
+            this.shapes.push({...shape});
+        }else if(this.tool==="line"){
+            shape={
+                id:crypto.randomUUID(),
+                type:ShapeType.LINE,
+                data:{
+                    fromX:this.startX,
+                    fromY:this.startY,
+                    toX:worldX,
+                    toY:worldY
+                }
+            }
+            this.shapes.push({...shape});
         }
     clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
@@ -160,7 +185,12 @@ export class Game{
                 this.ctx.arc(cx,cy,rad,0,Math.PI*2)
                 this.ctx.stroke();
             }else if(this.tool==="arrow"){
-                
+                drawArrow(this.canvas,this.ctx,this.startX,worldX,this.startY,worldY);
+            }else if(this.tool==="line"){
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.startX,this.startY);
+                this.ctx.lineTo(worldX,worldY);
+                this.ctx.stroke();
             }
         }
     }
