@@ -2,6 +2,7 @@ import axios from "axios";
 import { clearCanvas } from "./clearCanvas";
 import { ShapeType } from "@/generated/prisma/enums";
 import { erasing } from "./erasing";
+import { drawRhombus } from "./rhombus";
 
 export type ShapesType={
     id:string,
@@ -60,28 +61,27 @@ export class Game{
     }
 
     mouseDownHandler=(e:MouseEvent)=>{
-    
-    if(this.tool==="eraser"){
-        const worldX =(e.offsetX-this.cameraX)/this.scale;
-        const worldY =(e.offsetY-this.cameraY)/this.scale;
-        this.shapes=erasing(worldX,worldY,this.shapes);
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
-        return;
-    }
-
-    this.isDrawing=true;
     this.startX = (e.offsetX - this.cameraX)/this.scale;
     this.startY = (e.offsetY - this.cameraY)/this.scale;
+    if(this.tool==="eraser"){
+        this.shapes=erasing(this.startX,this.startY,this.shapes);
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }else  this.isDrawing=true;
+    
     }
     mouseUpHandler=async(e:MouseEvent)=>{
         this.isDraggingShape = false;
         this.isDrawing=false;
+
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
         const width = worldX - this.startX;
         const height = worldY - this.startY;
+
+        let shape:ShapesType;
         if(this.tool==="rect"){
-        const shape={
+        shape={
+        id:crypto.randomUUID(),
         type:ShapeType.RECT,
         data: {
             startX: this.startX,
@@ -90,16 +90,38 @@ export class Game{
             height
         }
         }
-        await axios.post("/api/shapes",{
-            type:shape.type,
-            data:shape.data
-        })
-        this.shapes.push({
-             id:crypto.randomUUID(),
-             ...shape
-        })
-    }
-   
+        // await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
+        this.shapes.push({...shape});
+        }else if(this.tool==="rhombus"){
+            shape={
+                id:crypto.randomUUID(),
+                type:ShapeType.RHOMBUS,
+                data:{
+                    cx:(this.startX+worldX)/2,
+                    cy:(this.startY+worldY)/2,
+                    h:worldX-this.startX,
+                    v:worldY-this.startY
+                }
+            }
+            this.shapes.push({...shape});
+        }else if(this.tool==="circle"){
+            const cx=(this.startX+worldX)/2, cy=(this.startY+worldY)/2;
+            const rad=Math.sqrt((worldX-cx)**2 + (worldY-cy)**2);
+            this.ctx.beginPath();
+            this.ctx.arc(cx,cy,rad,0,Math.PI*2)
+            this.ctx.stroke();
+            shape={
+                id:crypto.randomUUID(),
+                type:ShapeType.CIRCLE,
+                data:{
+                    cx,cy,radius:rad
+                }
+            }
+            this.shapes.push({...shape})
+        }
     clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
 
@@ -122,12 +144,23 @@ export class Game{
         if(this.isDrawing){
             this.redraw();
             if(this.tool==="rect"){
-            const width=worldX-this.startX;
-            const height=worldY-this.startY;
+            const width=worldX-this.startX, height=worldY-this.startY;
             this.ctx.beginPath();
             this.ctx.strokeStyle="rgb(0,0,0)";
             this.ctx.rect(this.startX,this.startY,width,height)
             this.ctx.stroke()
+            }else if(this.tool==="rhombus"){
+                const cx=(this.startX+worldX)/2, cy=(this.startY+worldY)/2;
+                const h=worldX-this.startX, v=worldY-this.startY;
+                drawRhombus(this.canvas,this.ctx,cx,cy,h,v)
+            }else if(this.tool==="circle"){
+                const cx=(this.startX+worldX)/2, cy=(this.startY+worldY)/2;
+                const rad=Math.sqrt((worldX-cx)**2 + (worldY-cy)**2);
+                this.ctx.beginPath();
+                this.ctx.arc(cx,cy,rad,0,Math.PI*2)
+                this.ctx.stroke();
+            }else if(this.tool==="arrow"){
+                
             }
         }
     }

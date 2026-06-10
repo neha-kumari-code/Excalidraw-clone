@@ -1,34 +1,7 @@
 
-// import { ShapesType } from "./game";
-// import { ShapeType } from "@/generated/prisma/enums";
-
-// export async function clearCanvas(canvas:HTMLCanvasElement,ctx:CanvasRenderingContext2D,shapes:ShapesType[], selectedShape: ShapesType | null){
-   
-//     ctx.clearRect(0,0,canvas.width,canvas.height)
-//    shapes.forEach((s:{id:string,type:ShapeType,data:any}) => {
-//     ctx.beginPath();
-//     if(this.selectedShape?.id === shape.id){
-//     ctx.strokeStyle = "blue";
-//     ctx.lineWidth = 2;
-
-//     ctx.strokeRect(
-//         startX,
-//         startY,
-//         width,
-//         height
-//     );
-// }
-//     if(s.type=="RECT"){
-//         const d=s.data as any;
-//         ctx.rect(d.startX,d.startY,d.width,d.height)
-//         ctx.stroke();
-//     }
-//    });
-// }
-
-
 import { ShapesType } from "./game";
 import { ShapeType } from "@/generated/prisma/enums";
+import { drawRhombus } from "./rhombus";
 
 function drawSelection(
   ctx: CanvasRenderingContext2D,
@@ -74,46 +47,37 @@ function drawSelection(
   });
 }
 
-export function clearCanvas(
-    canvas: HTMLCanvasElement,
-    ctx: CanvasRenderingContext2D,
-    shapes: ShapesType[],
-    selectedShape: ShapesType | null
-) {
+export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContext2D,shapes: ShapesType[],selectedShape: ShapesType | null) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     shapes.forEach((s) => {
         if (s.type === ShapeType.RECT) {
             const d = s.data;
-
-            // Draw rectangle
             ctx.beginPath();
             ctx.strokeStyle = "black";
             ctx.lineWidth = 1;
-
-            ctx.rect(
-                d.startX,
-                d.startY,
-                d.width,
-                d.height
-            );
-
+            ctx.rect(d.startX,d.startY,d.width,d.height);
             ctx.stroke();
-
-            // Draw selection border
+            // draw selection border
             if (selectedShape?.id === s.id) {
                 drawSelection(ctx, d.startX, d.startY, d.width, d.height);
-                // ctx.beginPath();
-                // ctx.strokeStyle = "blue";
-                // ctx.lineWidth = 2;
-
-                // ctx.strokeRect(
-                //     d.startX,
-                //     d.startY,
-                //     d.width,
-                //     d.height
-                // );
             }
+        }else if(s.type===ShapeType.RHOMBUS){
+          const data=s.data;
+          drawRhombus(canvas,ctx,data.cx,data.cy,data.h,data.v);
+          if (selectedShape?.id === s.id) {
+                const startX=data.cx-data.h/2, startY=data.cy-data.v/2;
+                drawSelection(ctx,startX,startY, data.h, data.v);
+          }
+        }else if(s.type===ShapeType.CIRCLE){
+          const data=s.data;
+          ctx.beginPath();
+          ctx.arc(data.cx,data.cy,data.radius,0,Math.PI*2);
+          ctx.stroke();
+          if (selectedShape?.id === s.id) {
+                const startX=data.cx-data.radius, startY=data.cy-data.radius;
+                drawSelection(ctx,startX,startY,data.radius*2, data.radius*2);
+          }
         }
     });
 }
