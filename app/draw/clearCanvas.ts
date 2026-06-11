@@ -3,6 +3,8 @@ import { ShapesType } from "./game";
 import { ShapeType } from "@/generated/prisma/enums";
 import { drawRhombus } from "./rhombus";
 import { drawArrow } from "./arrow";
+import { drawPencil } from "./pencil";
+import { drawText } from "./text";
 
 function drawSelection(
   ctx: CanvasRenderingContext2D,
@@ -87,6 +89,12 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
             ctx.moveTo(s.data.fromX,s.data.fromY);
             ctx.lineTo(s.data.toX,s.data.toY);
             ctx.stroke();
+        }else if(s.type===ShapeType.PENCIL){
+          const points=s.data;
+          drawPencil(canvas,ctx,points);
+        }else if(s.type===ShapeType.TEXT){
+          const data=s.data;
+          drawText(canvas,ctx,data.text,data.x,data.y);
         }
     });
 }

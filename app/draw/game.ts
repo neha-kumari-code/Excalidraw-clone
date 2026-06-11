@@ -4,6 +4,8 @@ import { ShapeType } from "@/generated/prisma/enums";
 import { callErase, erasing } from "./erasing";
 import { drawRhombus } from "./rhombus";
 import { drawArrow } from "./arrow";
+import { drawPencil } from "./pencil";
+import { drawText } from "./text";
 
 export type ShapesType={
     id:string,
@@ -21,9 +23,6 @@ export class Game{
     private shapes:ShapesType[];
     private cameraX = 0;
     private cameraY = 0;
-    // private isPanning = false;
-    // private lastX = 0;
-    // private lastY = 0;
     private scale = 1;
     private selectedShape: ShapesType | null = null;
     private isDraggingShape = false;
@@ -31,6 +30,8 @@ export class Game{
     private dragOffsetY = 0;
     private isErasing:boolean=false;
     private pencilPoints:{x:number,y:number}[]=[];
+    private currentText="";
+    private isTyping=false;
     constructor(tool:string,canvas:HTMLCanvasElement){
         this.canvas=canvas;
         this.ctx=canvas.getContext("2d")!
@@ -55,11 +56,13 @@ export class Game{
         this.canvas.addEventListener("mouseup",this.mouseUpHandler);
         this.canvas.addEventListener("mousemove",this.mouseMoveHandler)
         this.canvas.addEventListener("wheel", this.wheelHandler);
+        window.addEventListener("keydown",this.keyDownHandler);
         this.cleanUp= ()=>{
             this.canvas.removeEventListener("mousedown",this.mouseDownHandler);
             this.canvas.removeEventListener("mouseup",this.mouseUpHandler);
             this.canvas.removeEventListener("mousemove",this.mouseMoveHandler)
             this.canvas.removeEventListener("wheel", this.wheelHandler);
+            window.removeEventListener("keydown",this.keyDownHandler);
         }
     }
 
@@ -68,19 +71,20 @@ export class Game{
     this.startY = (e.offsetY - this.cameraY)/this.scale;
     if(this.tool==="eraser"){
         this.isErasing=true;
-    }else{
-          this.isDrawing=true;
-          if(this.tool==="pencil"){
-            this.pencilPoints.push({x:this.startX,y:this.startY});
-          }
+    }else if(this.tool==="text"){
+        this.currentText="";
+        this.isTyping=true;
     }
-    
+    else{ 
+        this.isDrawing=true;
+        this.pencilPoints.push({x:this.startX,y:this.startY});
+    }
     }
     
     mouseUpHandler=async(e:MouseEvent)=>{
         this.isDraggingShape = false;
         this.isDrawing=false;
-       
+      
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
         const width = worldX - this.startX;
@@ -156,6 +160,26 @@ export class Game{
                 }
             }
             this.shapes.push({...shape});
+        }else if(this.tool==="pencil"){
+            this.pencilPoints.push({x:worldX,y:worldY});
+             shape={
+                id:crypto.randomUUID(),
+                type:ShapeType.PENCIL,
+                data:this.pencilPoints
+            }
+            this.shapes.push({...shape});
+            this.pencilPoints=[];
+        }else if(this.tool==="text" && this.currentText!==""){
+            console.log("B")
+             this.shapes.push({
+                id:crypto.randomUUID(),
+                type:ShapeType.TEXT,
+                data:{
+                   x:this.startX,
+                   y:this.startY,
+                   text:this.currentText
+                }
+            })
         }
     clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
@@ -207,8 +231,33 @@ export class Game{
                 this.ctx.stroke();
             }else if(this.tool==="pencil"){
                 this.pencilPoints.push({x:worldX,y:worldY});
+                drawPencil(this.canvas,this.ctx,this.pencilPoints);
             }
         }
+    }
+
+    keyDownHandler=(e:KeyboardEvent)=>{
+        if(!this.isTyping)return;
+        if(e.key==='Enter'){
+            this.shapes.push({
+                id:crypto.randomUUID(),
+                type:ShapeType.TEXT,
+                data:{
+                   x:this.startX,
+                   y:this.startY,
+                   text:this.currentText
+                }
+            })
+           
+        }else if(e.key==='Backspace'){
+            console.log("before:", this.currentText);
+            this.currentText=this.currentText.slice(0,-1);
+            console.log("after:", this.currentText);
+        }else if(e.key.length===1){
+            this.currentText+=e.key;
+        }
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+        drawText(this.canvas,this.ctx,this.currentText,this.startX,this.startY);
     }
 
   wheelHandler = (e: WheelEvent) => {
@@ -236,8 +285,7 @@ export class Game{
     // apply camera transform
     this.ctx.setTransform(this.scale, 0, 0, this.scale, this.cameraX, this.cameraY);
 
-    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape
-    );
+    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
     setTool(tool:string){
         this.tool=tool

@@ -78,6 +78,15 @@ export function erasing(x:number,y:number,shapes:ShapesType[]){
         
         const { fromX, fromY, toX, toY } = s.data;
         if(lineErase(fromX,fromY,toX,toY,x,y))ids.push(s.id);
+        }else if(s.type===ShapeType.PENCIL){
+            const points=s.data;
+            for(let i=0;i<points.length-1;i++){
+                const p1=points[i], p2=points[i+1];
+                if(lineErase(p1.x,p1.y,p2.x,p2.y,x,y)){
+                    ids.push(s.id);
+                    break;
+                }    
+            }
         }
     })
     return callErase(ids,shapes)
