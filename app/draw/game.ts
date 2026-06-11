@@ -1,7 +1,7 @@
 import axios from "axios";
 import { clearCanvas } from "./clearCanvas";
 import { ShapeType } from "@/generated/prisma/enums";
-import { erasing } from "./erasing";
+import { callErase, erasing } from "./erasing";
 import { drawRhombus } from "./rhombus";
 import { drawArrow } from "./arrow";
 
@@ -29,6 +29,8 @@ export class Game{
     private isDraggingShape = false;
     private dragOffsetX = 0;
     private dragOffsetY = 0;
+    private isErasing:boolean=false;
+    private pencilPoints:{x:number,y:number}[]=[];
     constructor(tool:string,canvas:HTMLCanvasElement){
         this.canvas=canvas;
         this.ctx=canvas.getContext("2d")!
@@ -65,20 +67,28 @@ export class Game{
     this.startX = (e.offsetX - this.cameraX)/this.scale;
     this.startY = (e.offsetY - this.cameraY)/this.scale;
     if(this.tool==="eraser"){
-        this.shapes=erasing(this.startX,this.startY,this.shapes);
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
-    }else  this.isDrawing=true;
+        this.isErasing=true;
+    }else{
+          this.isDrawing=true;
+          if(this.tool==="pencil"){
+            this.pencilPoints.push({x:this.startX,y:this.startY});
+          }
+    }
     
     }
+    
     mouseUpHandler=async(e:MouseEvent)=>{
         this.isDraggingShape = false;
         this.isDrawing=false;
-
+       
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
         const width = worldX - this.startX;
         const height = worldY - this.startY;
-
+        if(this.isErasing){
+            this.shapes=erasing(worldX,worldY,this.shapes)
+            this.isErasing=false;
+        }
         let shape:ShapesType;
         if(this.tool==="rect"){
         shape={
@@ -166,6 +176,10 @@ export class Game{
         return;
         }
 
+        if(this.isErasing){
+                this.shapes=erasing(worldX,worldY,this.shapes)
+        }
+
         if(this.isDrawing){
             this.redraw();
             if(this.tool==="rect"){
@@ -191,6 +205,8 @@ export class Game{
                 this.ctx.moveTo(this.startX,this.startY);
                 this.ctx.lineTo(worldX,worldY);
                 this.ctx.stroke();
+            }else if(this.tool==="pencil"){
+                this.pencilPoints.push({x:worldX,y:worldY});
             }
         }
     }

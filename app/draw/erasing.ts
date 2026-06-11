@@ -11,6 +11,33 @@ export const callErase=(ids:string[],shapes:ShapesType[])=>{
        return shapes;
 }
 
+export const lineErase=(fromX:number,fromY:number,toX:number,toY:number,x:number,y:number)=>{
+     const dx = toX - fromX;
+        const dy = toY - fromY;
+
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return;
+
+        let t =
+            ((x - fromX) * dx + (y - fromY) * dy) /
+            lenSq;
+
+        t = Math.max(0, Math.min(1, t));
+
+        const closestX = fromX + t * dx;
+        const closestY = fromY + t * dy;
+
+        const distance = Math.hypot(
+            x - closestX,
+            y - closestY
+        );
+
+        if (distance <= 3) {
+           return true;
+        }
+    
+}
+
 export function erasing(x:number,y:number,shapes:ShapesType[]){
     const ids:string[]=[];
     shapes.forEach((s)=>{
@@ -36,17 +63,21 @@ export function erasing(x:number,y:number,shapes:ShapesType[]){
             if(part1+part2<=1){
                 ids.push(s.id);
             }
-        }else if(s.type===ShapeType.LINE){
-            const fromX=s.data.fromX, fromY=s.data.fromY, toX=s.data.toX, toY=s.data.toY;
-            // A-----P----B
-            // cross product of AP AB
-            const cross=((x-fromX)*(toY-fromY))-((toX-fromX)*(y-fromY));
-            if(Math.abs(cross)>1e-6)return;
-            const dot=((x-fromX)*(toX-fromX))+((toY-fromY)*(y-fromY));
-            if (dot < 0) return;
-            const lenSqd=(toX-fromX)**2 + (toY-fromY)**2;
-            if(dot>lenSqd)return;
-            ids.push(s.id);
+        }else if(s.type===ShapeType.LINE || s.type===ShapeType.ARROW){
+            // const fromX=s.data.fromX, fromY=s.data.fromY, toX=s.data.toX, toY=s.data.toY;
+            // // A-----P----B
+            // // cross product of AP AB
+            // const cross=((x-fromX)*(toY-fromY))-((toX-fromX)*(y-fromY));
+            // if(Math.abs(cross)>1e-6)return;
+            // const dot=((x-fromX)*(toX-fromX))+((toY-fromY)*(y-fromY));
+
+            // if (dot < 0) return;
+            // const lenSqd=(toX-fromX)**2 + (toY-fromY)**2;
+            // if(dot>lenSqd)return;
+            // ids.push(s.id);
+        
+        const { fromX, fromY, toX, toY } = s.data;
+        if(lineErase(fromX,fromY,toX,toY,x,y))ids.push(s.id);
         }
     })
     return callErase(ids,shapes)

@@ -20,6 +20,9 @@ export function drawArrow(canvas: HTMLCanvasElement,ctx: CanvasRenderingContext2
     ctx.beginPath();
     ctx.moveTo(toX, toY);
     ctx.lineTo(topX, topY);
+    ctx.stroke();
+    ctx.moveTo(toX, toY);
     ctx.lineTo(botX, botY);
+    ctx.stroke();
     ctx.closePath();
 }
