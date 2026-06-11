@@ -1,5 +1,6 @@
 import { ShapeType } from "@/generated/prisma/enums";
 import { ShapesType } from "./game";
+import { Circle, Line, Rectangle, Rhombus } from "./coordinate";
 
 export const callErase=(ids:string[],shapes:ShapesType[])=>{
         ids.forEach((id)=>{
@@ -11,56 +12,18 @@ export const callErase=(ids:string[],shapes:ShapesType[])=>{
        return shapes;
 }
 
-export const lineErase=(fromX:number,fromY:number,toX:number,toY:number,x:number,y:number)=>{
-     const dx = toX - fromX;
-        const dy = toY - fromY;
-
-        const lenSq = dx * dx + dy * dy;
-        if (lenSq === 0) return;
-
-        let t =
-            ((x - fromX) * dx + (y - fromY) * dy) /
-            lenSq;
-
-        t = Math.max(0, Math.min(1, t));
-
-        const closestX = fromX + t * dx;
-        const closestY = fromY + t * dy;
-
-        const distance = Math.hypot(
-            x - closestX,
-            y - closestY
-        );
-
-        if (distance <= 3) {
-           return true;
-        }
-    
-}
-
 export function erasing(x:number,y:number,shapes:ShapesType[]){
     const ids:string[]=[];
     shapes.forEach((s)=>{
         if(s.type===ShapeType.RECT){
             const data=s.data;
-            const left=Math.min(data.startX,data.startX+data.width);
-            const right=Math.max(data.startX,data.startX+data.width);
-            const top=Math.min(data.startY,data.startY+data.height);
-            const bottom=Math.max(data.startY,data.startY+data.height);
-            if(x>=left && x<=right && y>=top && y<=bottom){
-                ids.push(s.id);
-            }
+           if(Rectangle(x,y,data.startX,data.startY,data.width,data.height))ids.push(s.id);
         }else if(s.type===ShapeType.CIRCLE){
             const data=s.data;
-            const dx=x-data.centerX,dy=y-data.centerY,r=data.radius;
-            if(dx*dx+dy*dy<=r*r){
-                ids.push(s.id);
-            }
+            if(Circle(x,y,data.centerX,data.centerY,data.radius))ids.push(s.id);
         }else if(s.type===ShapeType.RHOMBUS){
-            const cx=s.data.centerX, cy=s.data.centerY, h=s.data.hrizontalDiagLen, v=s.data.verticalDaigLen;
-            const part1=Math.abs(x-cx)/(h/2);
-            const part2=Math.abs(y-cy)/(v/2);
-            if(part1+part2<=1){
+            const cx=s.data.cx, cy=s.data.cy, h=s.data.h, v=s.data.v;
+            if(Rhombus(x,y,cx,cy,h,v)){
                 ids.push(s.id);
             }
         }else if(s.type===ShapeType.LINE || s.type===ShapeType.ARROW){
@@ -77,12 +40,14 @@ export function erasing(x:number,y:number,shapes:ShapesType[]){
             // ids.push(s.id);
         
         const { fromX, fromY, toX, toY } = s.data;
-        if(lineErase(fromX,fromY,toX,toY,x,y))ids.push(s.id);
+        if(Line(fromX,fromY,toX,toY,x,y)){
+            ids.push(s.id);
+        }
         }else if(s.type===ShapeType.PENCIL){
             const points=s.data;
             for(let i=0;i<points.length-1;i++){
                 const p1=points[i], p2=points[i+1];
-                if(lineErase(p1.x,p1.y,p2.x,p2.y,x,y)){
+                if(Line(p1.x,p1.y,p2.x,p2.y,x,y)){
                     ids.push(s.id);
                     break;
                 }    

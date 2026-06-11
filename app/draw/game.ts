@@ -6,6 +6,7 @@ import { drawRhombus } from "./rhombus";
 import { drawArrow } from "./arrow";
 import { drawPencil } from "./pencil";
 import { drawText } from "./text";
+import editing from "./editing";
 
 export type ShapesType={
     id:string,
@@ -32,6 +33,8 @@ export class Game{
     private pencilPoints:{x:number,y:number}[]=[];
     private currentText="";
     private isTyping=false;
+    private lastMouseX=0;
+    private lastMouseY=0;
     constructor(tool:string,canvas:HTMLCanvasElement){
         this.canvas=canvas;
         this.ctx=canvas.getContext("2d")!
@@ -74,10 +77,39 @@ export class Game{
     }else if(this.tool==="text"){
         this.currentText="";
         this.isTyping=true;
+    }else if(this.tool===""){
+       this.selectedShape =editing(this.startX, this.startY, this.shapes);
+        if (this.selectedShape) {
+        this.isDraggingShape = true;
+        }
+        if(this.selectedShape?.type===ShapeType.RECT){
+            this.dragOffsetX=this.startX-this.selectedShape.data.startX;
+             this.dragOffsetY=this.startY-this.selectedShape.data.startY;
+        }else if(this.selectedShape?.type===ShapeType.TEXT){
+            this.dragOffsetX=this.startX-this.selectedShape.data.x;
+             this.dragOffsetY=this.startY-this.selectedShape.data.y;
+        }
+        else if(this.selectedShape?.type===ShapeType.RHOMBUS || this.selectedShape?.type===ShapeType.CIRCLE){
+            console.log("rhombs")
+            this.dragOffsetX=this.startX-this.selectedShape.data.cx;
+             this.dragOffsetY=this.startY-this.selectedShape.data.cy;
+        }else if(this.selectedShape?.type===ShapeType.LINE || this.selectedShape?.type===ShapeType.ARROW){
+            this.lastMouseX = this.startX;
+            this.lastMouseY = this.startY;
+        }else if(this.selectedShape?.type===ShapeType.PENCIL){
+            this.lastMouseX = this.startX;
+            this.lastMouseY = this.startY;
+        }
     }
     else{ 
+        if(this.tool==="pencil"){
+          this.pencilPoints = [];
+            this.pencilPoints.push({
+                x:this.startX,
+                y:this.startY
+    });
+    }
         this.isDrawing=true;
-        this.pencilPoints.push({x:this.startX,y:this.startY});
     }
     }
     
@@ -121,6 +153,10 @@ export class Game{
                     v:worldY-this.startY
                 }
             }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
             this.shapes.push({...shape});
         }else if(this.tool==="circle"){
             const cx=(this.startX+worldX)/2, cy=(this.startY+worldY)/2;
@@ -135,6 +171,10 @@ export class Game{
                     cx,cy,radius:rad
                 }
             }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
             this.shapes.push({...shape})
         }else if(this.tool==="arrow"){
              shape={
@@ -147,6 +187,10 @@ export class Game{
                     toY:worldY
                 }
             }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
             this.shapes.push({...shape});
         }else if(this.tool==="line"){
             shape={
@@ -159,46 +203,83 @@ export class Game{
                     toY:worldY
                 }
             }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
             this.shapes.push({...shape});
         }else if(this.tool==="pencil"){
-            this.pencilPoints.push({x:worldX,y:worldY});
              shape={
                 id:crypto.randomUUID(),
                 type:ShapeType.PENCIL,
                 data:this.pencilPoints
             }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
             this.shapes.push({...shape});
             this.pencilPoints=[];
-        }else if(this.tool==="text" && this.currentText!==""){
-            console.log("B")
-             this.shapes.push({
-                id:crypto.randomUUID(),
-                type:ShapeType.TEXT,
-                data:{
-                   x:this.startX,
-                   y:this.startY,
-                   text:this.currentText
-                }
-            })
+        // }else if(this.tool==="text" && this.currentText!==""){
+        //      shape={
+        //         id:crypto.randomUUID(),
+        //         type:ShapeType.TEXT,
+        //         data:{
+        //            x:this.startX,
+        //            y:this.startY,
+        //            text:this.currentText
+        //         }
+        //     }
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
+        // this.shapes.push({...shape})
         }
     clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
     }
-
 
     mouseMoveHandler=(e:MouseEvent)=>{
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
         
-      if(this.isDraggingShape && this.selectedShape){
-        this.selectedShape.data.startX =
-        worldX - this.dragOffsetX;
+    if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.RECT){
+        this.selectedShape.data.startX =worldX - this.dragOffsetX;
+        this.selectedShape.data.startY =worldY - this.dragOffsetY;
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }else if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.TEXT){
+        this.selectedShape.data.x =worldX - this.dragOffsetX;
+        this.selectedShape.data.y =worldY - this.dragOffsetY;
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }
+    else if(this.isDraggingShape && this.selectedShape && (this.selectedShape.type===ShapeType.RHOMBUS || this.selectedShape.type===ShapeType.CIRCLE)){
+        this.selectedShape.data.cx =worldX - this.dragOffsetX;
+        this.selectedShape.data.cy =worldY - this.dragOffsetY;  
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }else if(this.isDraggingShape && this.selectedShape && (this.selectedShape.type===ShapeType.LINE || this.selectedShape.type===ShapeType.ARROW)){
+        const dx = worldX - this.lastMouseX;
+        const dy = worldY - this.lastMouseY;
 
-        this.selectedShape.data.startY =
-        worldY - this.dragOffsetY;
+        this.selectedShape.data.fromX += dx;
+        this.selectedShape.data.fromY += dy;
 
-        this.redraw();
-        return;
-        }
+        this.selectedShape.data.toX += dx;
+        this.selectedShape.data.toY += dy;
+
+        this.lastMouseX = worldX;
+        this.lastMouseY = worldY;
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }else if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.PENCIL){
+        const dx = worldX - this.lastMouseX;
+        const dy = worldY - this.lastMouseY;
+        this.selectedShape.data.forEach((p:{x:number,y:number})=>{
+            p.x+=dx;
+            p.y+=dy;
+        })
+        this.lastMouseX = worldX;
+        this.lastMouseY = worldY;
+        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    }
 
         if(this.isErasing){
                 this.shapes=erasing(worldX,worldY,this.shapes)
@@ -236,10 +317,10 @@ export class Game{
         }
     }
 
-    keyDownHandler=(e:KeyboardEvent)=>{
+    keyDownHandler=async(e:KeyboardEvent)=>{
         if(!this.isTyping)return;
         if(e.key==='Enter'){
-            this.shapes.push({
+            const shape:ShapesType=({
                 id:crypto.randomUUID(),
                 type:ShapeType.TEXT,
                 data:{
@@ -248,7 +329,15 @@ export class Game{
                    text:this.currentText
                 }
             })
-           
+            this.shapes.push({...shape})
+            this.isTyping = false;
+            this.currentText = "";
+            clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+            return;
+        //     await axios.post("/api/shapes",{
+        //     type:shape.type,
+        //     data:shape.data
+        // })
         }else if(e.key==='Backspace'){
             console.log("before:", this.currentText);
             this.currentText=this.currentText.slice(0,-1);
