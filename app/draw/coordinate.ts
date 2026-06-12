@@ -10,7 +10,6 @@ export const Rectangle=(x:number,y:number,startX:number,startY:number,width:numb
 }
 
 export const Circle=(x:number,y:number,centerX:number,centerY:number,radius:number)=>{
-    console.log("F")
     const dx=x-centerX,dy=y-centerY,r=radius;
     if(dx*dx+dy*dy<=r*r){
        return true;
@@ -52,12 +51,4 @@ export const Line=(fromX:number,fromY:number,toX:number,toY:number,x:number,y:nu
            return true;
         }
         return false;
-}
-
-export const Pencil=(x:number,y:number,centerX:number,centerY:number,radius:number)=>{
-
-}
-
-export const Text=(x:number,y:number,centerX:number,centerY:number,radius:number)=>{
-
 }

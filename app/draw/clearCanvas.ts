@@ -16,11 +16,17 @@ function drawSelection(
   const padding = 4;
   const handleSize = 8;
 
-  const sx = x - padding;
-  const sy = y - padding;
-  const sw = width + padding * 2;
-  const sh = height + padding * 2;
+  const left = Math.min(x, x + width);
+const right = Math.max(x, x + width);
 
+const top = Math.min(y, y + height);
+const bottom = Math.max(y, y + height);
+
+  const sx = left - padding;
+const sy = top - padding;
+const sw = right - left + padding * 2;
+const sh = bottom - top + padding * 2;
+console.log(`printing:- ${sx} ${sy} ${sw} ${sh}`)
   // selection border
   ctx.strokeStyle = "#6965db"; // Excalidraw-like purple
   ctx.lineWidth = 2;
@@ -48,6 +54,16 @@ function drawSelection(
     ctx.fill();
     ctx.stroke();
   });
+}
+
+function selectionArrowLine( ctx: CanvasRenderingContext2D,fromX:number,fromY:number,toX:number,toY:number){
+  ctx.beginPath();
+  ctx.strokeStyle="blue"
+  ctx.arc(fromX,fromY,3,0,Math.PI*2);
+  ctx.stroke();
+   ctx.beginPath();
+  ctx.arc(toX,toY,3,0,Math.PI*2);
+  ctx.stroke();
 }
 
 export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContext2D,shapes: ShapesType[],selectedShape: ShapesType | null) {
@@ -84,17 +100,40 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
         }else if(s.type===ShapeType.ARROW){
           const data=s.data;
           drawArrow(canvas,ctx,data.fromX,data.toX,data.fromY,data.toY);
+           if (selectedShape?.id === s.id) {
+                selectionArrowLine(ctx,data.fromX,data.fromY,data.toX,data.toY);
+          }
         }else if(s.type===ShapeType.LINE){
             ctx.beginPath();
             ctx.moveTo(s.data.fromX,s.data.fromY);
             ctx.lineTo(s.data.toX,s.data.toY);
             ctx.stroke();
+            if (selectedShape?.id === s.id) {
+                selectionArrowLine(ctx,s.data.fromX,s.data.fromY,s.data.toX,s.data.toY);
+          }
         }else if(s.type===ShapeType.PENCIL){
           const points=s.data;
           drawPencil(canvas,ctx,points);
+           if (selectedShape?.id === s.id) {
+          let leastX=Number.MAX_SAFE_INTEGER, maxX=Number.MIN_SAFE_INTEGER, leastY=Number.MAX_SAFE_INTEGER, maxY=Number.MIN_SAFE_INTEGER;
+          points.forEach((p:{x:number,y:number}) => {
+            leastX=Math.min(leastX,p.x);
+            maxX=Math.max(maxX,p.x);
+            leastY=Math.min(leastY,p.y);
+            maxY=Math.max(maxY,p.y);
+          });
+          drawSelection(ctx,leastX,leastY,maxX-leastX, maxY-leastY);
+        }
         }else if(s.type===ShapeType.TEXT){
           const data=s.data;
-          drawText(canvas,ctx,data.text,data.x,data.y);
+          ctx.font = `${data.font ?? 20}px sans-serif`;
+          const metrics=ctx.measureText(data.text);
+           const textWidth=metrics.width;
+           const textHeight=data.font ?? 20;
+          drawText(canvas,ctx,data.text,data.x,data.y,data.font);
+           if (selectedShape?.id === s.id) {
+                drawSelection(ctx,data.x,data.y,textWidth,textHeight);
+          }
         }
     });
 }
