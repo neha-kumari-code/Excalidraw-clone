@@ -19,7 +19,7 @@ export default function SignIn() {
             toast.error("Invalid credentials")
           }else{
             toast.success("Login successful!")
-            router.push("/mainPage")
+            router.push("/dashboard")
           }
       }catch(e){
             toast.error("Something went wrong");
@@ -85,7 +85,7 @@ export default function SignIn() {
           <button className="w-full rounded cursor-pointer bg-slate-900 py-2 font-medium text-white transition hover:bg-slate-800"
           onClick={signInHandler}
           >
-            Continue
+            Login
           </button>
 
           {/* OR */}

@@ -25,7 +25,14 @@ export async function POST(req:NextRequest){
                 userId
             }
         })
-        return NextResponse.json(shape);
+        if(!shape){
+             return NextResponse.json({
+            success:false
+        });
+        }
+        return NextResponse.json({
+            success:true
+        });
     }catch(error){
         console.log(`error while uploading shape ${error}`)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

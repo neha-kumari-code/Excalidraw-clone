@@ -26,7 +26,6 @@ const bottom = Math.max(y, y + height);
 const sy = top - padding;
 const sw = right - left + padding * 2;
 const sh = bottom - top + padding * 2;
-console.log(`printing:- ${sx} ${sy} ${sw} ${sh}`)
   // selection border
   ctx.strokeStyle = "#6965db"; // Excalidraw-like purple
   ctx.lineWidth = 2;
@@ -73,7 +72,7 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
         if (s.type === ShapeType.RECT) {
             const d = s.data;
             ctx.beginPath();
-            ctx.strokeStyle = "black";
+            ctx.strokeStyle = "rgb(0, 0, 0)";
             ctx.lineWidth = 1;
             ctx.rect(d.startX,d.startY,d.width,d.height);
             ctx.stroke();
@@ -91,6 +90,7 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
         }else if(s.type===ShapeType.CIRCLE){
           const data=s.data;
           ctx.beginPath();
+          ctx.strokeStyle = "rgb(0, 0, 0)";
           ctx.arc(data.cx,data.cy,data.radius,0,Math.PI*2);
           ctx.stroke();
           if (selectedShape?.id === s.id) {
@@ -105,6 +105,7 @@ export function clearCanvas(canvas: HTMLCanvasElement,ctx: CanvasRenderingContex
           }
         }else if(s.type===ShapeType.LINE){
             ctx.beginPath();
+            ctx.strokeStyle = "rgb(0, 0, 0)";
             ctx.moveTo(s.data.fromX,s.data.fromY);
             ctx.lineTo(s.data.toX,s.data.toY);
             ctx.stroke();

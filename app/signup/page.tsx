@@ -101,7 +101,7 @@ export default function SignIn() {
           <button className="w-full rounded cursor-pointer bg-slate-900 py-2 font-medium text-white transition hover:bg-slate-800"
           onClick={signUpHandler}
           >
-            Continue
+            Sign up
           </button>
 
           {/* OR */}

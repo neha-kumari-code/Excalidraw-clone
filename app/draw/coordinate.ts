@@ -11,9 +11,12 @@ export const Rectangle=(x:number,y:number,startX:number,startY:number,width:numb
 
 export const Circle=(x:number,y:number,centerX:number,centerY:number,radius:number)=>{
     const dx=x-centerX,dy=y-centerY,r=radius;
+    console.log("cir")
     if(dx*dx+dy*dy<=r*r){
+        console.log("yes")
        return true;
     }
+    console.log("no")
     return false;
 }
 

@@ -8,6 +8,7 @@ import { drawPencil } from "./pencil";
 import { drawText } from "./text";
 import editing from "./editing";
 import { getLineResizeHandle, getResizeHandle, lineResizeHandle, ResizeHandle } from "./resize";
+import { printShapes } from "./printing";
 
 export type ShapesType={
     id:string,
@@ -23,6 +24,7 @@ export class Game{
     private isDrawing:boolean;
     private cleanUp:(()=>void) | null=null
     private shapes:ShapesType[];
+    private databaseShapes:ShapesType[]=[];
     private cameraX = 0;
     private cameraY = 0;
     private scale = 1;
@@ -41,7 +43,9 @@ export class Game{
     private resizeStartFont:number=0;
     private resizeStartX:number=0;
     private resizeStartTextWidth:number=0;
-    constructor(tool:string,canvas:HTMLCanvasElement){
+    private resizeStartY:number=0;
+    private onToolChange: (tool: string) => void;
+    constructor(tool:string,canvas:HTMLCanvasElement,onToolChange: (tool: string) => void){
         this.canvas=canvas;
         this.ctx=canvas.getContext("2d")!
         this.tool=tool;
@@ -50,14 +54,15 @@ export class Game{
         this.startX=0;
         this.startY=0;
         this.shapes=[];
+        this.onToolChange = onToolChange;
         this.init();
     }
     init=async()=>{
+        this.mouseHandler();
     const {data}=await axios.get("/api/shapes");
     if(!data.success)return;
-    this.shapes=data.shapes;
-    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
-    this.mouseHandler();
+    this.databaseShapes=data.shapes;
+    printShapes(this.canvas,this.ctx,this.databaseShapes);
     }
 
     mouseHandler(){
@@ -75,7 +80,8 @@ export class Game{
         }
     }
 
-    mouseDownHandler=(e:MouseEvent)=>{
+    mouseDownHandler=async(e:MouseEvent)=>{
+
     this.startX = (e.offsetX - this.cameraX)/this.scale;
     this.startY = (e.offsetY - this.cameraY)/this.scale;
     if(this.tool==="eraser"){
@@ -187,8 +193,9 @@ export class Game{
             this.isResizing = true;
             this.resizeHandle = handle;
             this.resizeStartFont = data.font ?? 20;  // ← snapshot
-            this.resizeStartX = data.x;  
+            this.resizeStartX = data.x;
             this.resizeStartTextWidth=textWidth;
+            this.resizeStartY=data.y;
             // keep selectedShape as is
             return;
         }
@@ -199,7 +206,8 @@ export class Game{
     this.selectedShape = clickedShape;
 
     if (!this.selectedShape) {
-        clearCanvas(this.canvas, this.ctx, this.shapes, null);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+        clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
         return;
     }
     // Handle drag setup
@@ -211,9 +219,9 @@ export class Game{
     else if(this.selectedShape?.type===ShapeType.TEXT){
             this.dragOffsetX=this.startX-this.selectedShape.data.x;
              this.dragOffsetY=this.startY-this.selectedShape.data.y;
-            //  this.isDraggingShape = true;
+             this.isDraggingShape = true;
         }
-        else if(this.selectedShape?.type===ShapeType.RHOMBUS){
+        else if(this.selectedShape?.type===ShapeType.RHOMBUS || this.selectedShape?.type===ShapeType.CIRCLE){
              this.isDraggingShape = true;
             this.dragOffsetX=this.startX-this.selectedShape.data.cx;
              this.dragOffsetY=this.startY-this.selectedShape.data.cy;
@@ -242,18 +250,21 @@ export class Game{
     mouseUpHandler=async(e:MouseEvent)=>{
         this.isDraggingShape = false;
         this.isDrawing=false;
-       if (this.isResizing) {
-    this.isResizing = false;
-    this.resizeHandle = null;
-    }
+        if (this.isResizing) {
+        this.isResizing = false;
+        this.resizeHandle = null;
+        return;
+        }
 
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
         const width = worldX - this.startX;
         const height = worldY - this.startY;
         if(this.isErasing){
-            this.shapes=erasing(worldX,worldY,this.shapes)
             this.isErasing=false;
+             this.tool="";
+         this.onToolChange("");
+            return;
         }
         let shape:ShapesType;
         if(this.tool==="rect"){
@@ -267,11 +278,9 @@ export class Game{
             height
         }
         }
-        // await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
         this.shapes.push({...shape});
+         this.tool="";
+         this.onToolChange("");
         }else if(this.tool==="rhombus"){
             shape={
                 id:crypto.randomUUID(),
@@ -283,11 +292,10 @@ export class Game{
                     v:worldY-this.startY
                 }
             }
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
+       
             this.shapes.push({...shape});
+             this.tool="";
+         this.onToolChange("");
         }else if(this.tool==="circle"){
             const cx=(this.startX+worldX)/2, cy=(this.startY+worldY)/2;
             const rad=Math.sqrt((worldX-cx)**2 + (worldY-cy)**2);
@@ -301,11 +309,9 @@ export class Game{
                     cx,cy,radius:rad
                 }
             }
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
             this.shapes.push({...shape})
+             this.tool="";
+         this.onToolChange("");
         }else if(this.tool==="arrow"){
              shape={
                 id:crypto.randomUUID(),
@@ -317,11 +323,9 @@ export class Game{
                     toY:worldY
                 }
             }
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
             this.shapes.push({...shape});
+             this.tool="";
+         this.onToolChange("");
         }else if(this.tool==="line"){
             shape={
                 id:crypto.randomUUID(),
@@ -333,32 +337,29 @@ export class Game{
                     toY:worldY
                 }
             }
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
             this.shapes.push({...shape});
+             this.tool="";
+         this.onToolChange("");
         }else if(this.tool==="pencil"){
              shape={
                 id:crypto.randomUUID(),
                 type:ShapeType.PENCIL,
                 data:this.pencilPoints
             }
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
             this.shapes.push({...shape});
+             this.tool="";
+         this.onToolChange("");
         }
-    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    const allShapes = [...this.databaseShapes, ...this.shapes];
+    clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }
 
     mouseMoveHandler=(e:MouseEvent)=>{
         const worldX =(e.offsetX - this.cameraX)/this.scale;
         const worldY =(e.offsetY - this.cameraY)/this.scale;
-    if(this.isResizing && this.selectedShape?.type===ShapeType.RECT){
-    const rect = this.selectedShape.data;
-    switch (this.resizeHandle) {
+        if(this.isResizing && this.selectedShape?.type===ShapeType.RECT){
+        const rect = this.selectedShape.data;
+         switch (this.resizeHandle) {
         case "se":
             rect.width = worldX - rect.startX;
             rect.height = worldY - rect.startY;
@@ -387,12 +388,8 @@ export class Game{
             break;
     }
 
-    clearCanvas(
-        this.canvas,
-        this.ctx,
-        this.shapes,
-        this.selectedShape
-    );
+    const allShapes = [...this.databaseShapes, ...this.shapes];
+    clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
 
     return;
     }else if(this.isResizing && this.selectedShape?.type===ShapeType.RHOMBUS){
@@ -434,16 +431,10 @@ export class Game{
             rhom.cy=(initBtmRightY+worldY)/2;
             break;
     }
-
-    clearCanvas(
-        this.canvas,
-        this.ctx,
-        this.shapes,
-        this.selectedShape
-    );
-
+ const allShapes = [...this.databaseShapes, ...this.shapes];
+    clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     return;
-    }else if(this.isResizing && this.selectedShape?.type===ShapeType.CIRCLE){
+}else if(this.isResizing && this.selectedShape?.type===ShapeType.CIRCLE){
      const cir = this.selectedShape.data;
     const left   = cir.cx - cir.radius;
     const right  = cir.cx + cir.radius;
@@ -500,15 +491,9 @@ export class Game{
             break;
         }
     }
-
-    clearCanvas(
-        this.canvas,
-        this.ctx,
-        this.shapes,
-        this.selectedShape
-    );
-
-    return;
+ const allShapes = [...this.databaseShapes, ...this.shapes];
+    clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
+ return;
     }else if(this.isResizing && (this.selectedShape?.type===ShapeType.ARROW || this.selectedShape?.type===ShapeType.LINE)){
         const arr=this.selectedShape.data;
         switch (this.resizeHandle) {
@@ -525,14 +510,9 @@ export class Game{
             break;
         }
     }
-
-    clearCanvas(
-        this.canvas,
-        this.ctx,
-        this.shapes,
-        this.selectedShape
-    );
-    } else if (this.isResizing && this.selectedShape?.type === ShapeType.PENCIL) {
+ const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
+} else if (this.isResizing && this.selectedShape?.type === ShapeType.PENCIL) {
     const points: { x: number; y: number }[] = this.selectedShape.data;
 
     // Compute bounding box
@@ -589,63 +569,77 @@ export class Game{
         p.x = anchorX + (p.x - anchorX) * scaleX;
         p.y = anchorY + (p.y - anchorY) * scaleY;
     });
-
-    clearCanvas(this.canvas, this.ctx, this.shapes, this.selectedShape);
+const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     return;
-}else if(this.isResizing && this.selectedShape?.type===ShapeType.TEXT){
+} else if (this.isResizing && this.selectedShape?.type === ShapeType.TEXT) {
     const txt = this.selectedShape.data;
+
+    // Fixed anchor corners (snapshotted at mousedown)
+    const rightX  = this.resizeStartX + this.resizeStartTextWidth;
+    const btmY = this.resizeStartY + this.resizeStartFont;
+
     switch (this.resizeHandle) {
-        case "se":{
-            const newWidth = worldX - txt.x;
+        case "se": {
+            // anchor: top-left (txt.x, txt.y) — both fixed
+            const newWidth = worldX - this.resizeStartX;
+            if (newWidth < 5) break;
             const scale = newWidth / this.resizeStartTextWidth;
             txt.font = this.resizeStartFont * scale;
+            // txt.x and txt.y don't change
             break;
         }
-        case "ne":{
-            const newWidth = worldX - txt.x;
+        case "sw": {
+            // anchor: top-right (fixedRight, txt.y) — right edge and y fixed
+            const newWidth = rightX - worldX;
+            if (newWidth < 5) break;
             const scale = newWidth / this.resizeStartTextWidth;
             txt.font = this.resizeStartFont * scale;
-            txt.y=worldY;
+            txt.x = rightX - newWidth; // left edge moves
+            // txt.y doesn't change
             break;
         }
-        case "sw":{
-             const newWidth = (this.resizeStartX + this.resizeStartTextWidth) - worldX;
+        case "ne": {
+            // anchor: bottom-left (txt.x, fixedBottom) — x and bottom fixed
+            const newWidth = worldX - this.resizeStartX;
+            if (newWidth < 5) break;
             const scale = newWidth / this.resizeStartTextWidth;
-            txt.font =  this.resizeStartFont * scale;
-            txt.x = worldX;
+            txt.font = this.resizeStartFont * scale;
+            // txt.x doesn't change
+            txt.y = btmY - txt.font; // top edge moves, bottom stays
             break;
         }
-        case "nw":{
-           const newWidth = (this.resizeStartX + this.resizeStartTextWidth) - worldX;
+        case "nw": {
+            // anchor: bottom-right (fixedRight, fixedBottom) — both fixed
+            const newWidth = rightX - worldX;
+            if (newWidth < 5) break;
             const scale = newWidth / this.resizeStartTextWidth;
-            txt.font =  this.resizeStartFont * scale;
-            txt.x = worldX;
+            txt.font = this.resizeStartFont * scale;
+            txt.x = rightX - newWidth; // left edge moves
+            txt.y = btmY - txt.font; // top edge moves, bottom stays
             break;
         }
     }
-
-    clearCanvas(
-        this.canvas,
-        this.ctx,
-        this.shapes,
-        this.selectedShape
-    );
-
+const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     return;
-    }
+}
     if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.RECT){
         this.selectedShape.data.startX =worldX - this.dragOffsetX;
         this.selectedShape.data.startY =worldY - this.dragOffsetY;
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }else if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.TEXT){
         this.selectedShape.data.x =worldX - this.dragOffsetX;
         this.selectedShape.data.y =worldY - this.dragOffsetY;
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }
     else if(this.isDraggingShape && this.selectedShape && (this.selectedShape.type===ShapeType.RHOMBUS || this.selectedShape.type===ShapeType.CIRCLE)){
         this.selectedShape.data.cx =worldX - this.dragOffsetX;
         this.selectedShape.data.cy =worldY - this.dragOffsetY;  
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }else if(this.isDraggingShape && this.selectedShape && (this.selectedShape.type===ShapeType.LINE || this.selectedShape.type===ShapeType.ARROW)){
         const dx = worldX - this.lastMouseX;
         const dy = worldY - this.lastMouseY;
@@ -658,7 +652,8 @@ export class Game{
 
         this.lastMouseX = worldX;
         this.lastMouseY = worldY;
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+      const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }else if(this.isDraggingShape && this.selectedShape && this.selectedShape.type===ShapeType.PENCIL){
         const dx = worldX - this.lastMouseX;
         const dy = worldY - this.lastMouseY;
@@ -668,11 +663,14 @@ export class Game{
         })
         this.lastMouseX = worldX;
         this.lastMouseY = worldY;
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
     }
 
         if(this.isErasing){
                 this.shapes=erasing(worldX,worldY,this.shapes)
+                 const allShapes = [...this.databaseShapes, ...this.shapes];
+                clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
         }
 
         if(this.isDrawing){
@@ -721,20 +719,20 @@ export class Game{
                 }
             })
             this.shapes.push({...shape})
+             this.tool="";
+         this.onToolChange("");
             this.isTyping = false;
             this.currentText = "";
-            clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+            const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
             return;
-        //     await axios.post("/api/shapes",{
-        //     type:shape.type,
-        //     data:shape.data
-        // })
         }else if(e.key==='Backspace'){
             this.currentText=this.currentText.slice(0,-1);
         }else if(e.key.length===1){
             this.currentText+=e.key;
         }
-        clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+       const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
         drawText(this.canvas,this.ctx,this.currentText,this.startX,this.startY,20);
     }
 
@@ -762,11 +760,19 @@ export class Game{
 
     // apply camera transform
     this.ctx.setTransform(this.scale, 0, 0, this.scale, this.cameraX, this.cameraY);
+const allShapes = [...this.databaseShapes, ...this.shapes];
+clearCanvas(this.canvas, this.ctx, allShapes, this.selectedShape);
+    }
 
-    clearCanvas(this.canvas,this.ctx,this.shapes,this.selectedShape);
+    getShapes(){
+        return this.shapes;
     }
     setTool(tool:string){
         this.tool=tool
+    }
+    resetShapes(){
+        this.databaseShapes=[...this.databaseShapes,...this.shapes];
+        this.shapes=[];
     }
     destroy(){
         this.cleanUp?.();
